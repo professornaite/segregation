@@ -1,0 +1,1298 @@
+---
+title: "Revised Technical File: Conceptualizing Topologies of Antiblackness in Education"
+bibliography: brown-references.bib # include references file
+csl: apa.csl
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    theme: flatly
+  pdf_document:
+    toc: false
+    toc_depth: 2
+    number_section: true 
+  word_document:
+    toc: false
+    reference_docx: word-styles-reference.docx
+editor_options:
+  markdown:
+    wrap: sentence
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo    = knitr::is_html_output(),  # code only in HTML
+  results = knitr::is_html_output(),  # results only in HTML  
+  warning = FALSE,
+  message = FALSE
+)
+
+library(here)
+here::i_am("technical-revisions-topologies-of-antiblackness.Rmd")
+
+```
+
+\newpage
+
+
+```{r, message=F, warning=F}
+# setup and global options
+library(tidyverse)
+library(sf)
+library(tidycensus)
+library(segregation)
+library(spdep)
+library(knitr)
+library(ggplot2)
+library(forcats)
+library(purrr)
+library(janitor)
+options(tigris_class = "sf", tigris_use_cache = TRUE)
+
+# small helper: standardize variable names and geometry
+clean_geo <- function(dat) {
+  dat %>%
+    st_transform(3857) %>%  # projected CRS for distance/weights
+    janitor::clean_names()
+}
+
+acs_year <- 2019  # 2015–2019 ACS 5-year estimates
+cat("Using", acs_year, "ACS 5-year estimates (2015–2019).\n")
+options(tigris_class = "sf", tigris_use_cache = TRUE)
+
+```
+
+
+
+```{r, message=F, warning=F}
+# ------------------------------------------------------------
+# State tract-level ACS data (KS, VA, NC)
+# ACS 2015–2019 5-year estimates
+#
+# Race/ethnicity variables are drawn from ACS Table B03002:
+#   White    = B03002_003 (Not Hispanic White alone)
+#   Black    = B03002_004 (Not Hispanic Black alone)
+#   Asian    = B03002_006 (Not Hispanic Asian alone)
+#   Hispanic = B03002_012 (Hispanic or Latino, any race)
+# ------------------------------------------------------------
+
+acs_vars <- c(
+  white    = "B03002_003",
+  black    = "B03002_004",
+  asian    = "B03002_006",
+  hispanic = "B03002_012"
+)
+
+# Kansas
+ks_acs_data <- get_acs(
+  geography = "tract",
+  variables = acs_vars,
+  state     = "KS",
+  geometry  = TRUE,
+  year      = acs_year
+)
+
+# Virginia
+va_acs_data <- get_acs(
+  geography = "tract",
+  variables = acs_vars,
+  state     = "VA",
+  geometry  = TRUE,
+  year      = acs_year
+)
+
+# North Carolina
+nc_acs_data <- get_acs(
+  geography = "tract",
+  variables = acs_vars,
+  state     = "NC",
+  geometry  = TRUE,
+  year      = acs_year
+)
+
+# ------------------------------------------------------------
+# Large urbanized areas (population ≥ 750,000)
+# ------------------------------------------------------------
+
+us_urban_areas <- get_acs(
+  geography = "urban area",
+  variables = "B01001_001",
+  geometry  = TRUE,
+  year      = acs_year,
+  survey    = "acs5"
+) %>%
+  dplyr::filter(estimate >= 750000) %>%
+  dplyr::transmute(
+    GEOID,
+    urban_name = stringr::str_remove(
+      NAME,
+      "\\s*Urban(ized)? Area \\(2010\\)"
+    ),
+    population = estimate,
+    geometry
+  )
+
+```
+
+```{r, message=F, warning=F}
+# ------------------------------------------------------------
+# METRO-LEVEL ANALYTIC DATASET (for Table 1 revision)
+# ------------------------------------------------------------
+
+metro_summary <- tract_data %>%
+  sf::st_drop_geometry() %>%
+  dplyr::group_by(region_name) %>%
+  dplyr::summarise(
+
+    # core structural counts
+    total_tracts = dplyr::n(),
+    total_population = sum(total_pop, na.rm = TRUE),
+
+    # racial composition (counts)
+    black_population = sum(black_pop, na.rm = TRUE),
+    white_population = sum(total_pop - black_pop, na.rm = TRUE),
+
+    # derived shares
+    pct_black = black_population / total_population,
+    pct_white = white_population / total_population,
+
+    # placeholders (will become nonzero after we compute Asian/Hispanic in full model data)
+    pct_asian = NA_real_,
+    pct_hispanic = NA_real_,
+
+    .groups = "drop"
+  )
+
+
+```
+
+
+```{r, message=F, warning=F}
+# ------------------------------------------------------------
+# DATA FILTERING SUMMARY (for reproducibility)
+# ------------------------------------------------------------
+
+initial_tracts <- tract_data %>%
+  sf::st_drop_geometry() %>%
+  nrow()
+
+final_tracts <- nrow(tract_data)
+
+excluded_tracts_total <- initial_tracts - final_tracts
+
+excluded_summary <- tibble::tibble(
+  initial_tracts = initial_tracts,
+  final_tracts = final_tracts,
+  excluded_tracts = excluded_tracts_total,
+  exclusion_rate = excluded_tracts_total / initial_tracts
+)
+
+excluded_summary
+
+excluded_summary %>%
+  knitr::kable(
+    caption = "Summary of Analytic Sample Filtering"
+  )
+
+```
+
+
+
+```{r, message=F, warning=F}
+
+# ------------------------------------------------------------
+# TABLE 1: BINARY Descriptive Statistics for the Analytic Sample
+# ------------------------------------------------------------
+
+metro_summary <- tract_data %>%
+  sf::st_drop_geometry() %>%
+  dplyr::group_by(region_name) %>%
+  dplyr::summarise(
+    census_tracts = dplyr::n(),
+    total_population = sum(total_pop, na.rm = TRUE),
+    black_population = sum(black_pop, na.rm = TRUE),
+    black_share = 100 * black_population / total_population,
+    mean_black_share = 100 * mean(black_share, na.rm = TRUE),
+    mean_bachelors_rate = 100 * mean(edu_rate, na.rm = TRUE),
+    median_home_value = median(med_value, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  dplyr::mutate(
+    total_population = scales::comma(round(total_population)),
+    black_population = scales::comma(round(black_population)),
+    black_share = round(black_share, 1),
+    mean_black_share = round(mean_black_share, 1),
+    mean_bachelors_rate = round(mean_bachelors_rate, 1),
+    median_home_value = scales::dollar(round(median_home_value))
+  )
+
+metro_summary
+
+knitr::kable(
+  metro_summary,
+  caption = "Descriptive Statistics for the Analytic Metropolitan Regions"
+)
+
+```
+
+
+
+
+```{r, message=F, warning=F}
+
+# ------------------------------------------------------------
+# METROPOLITAN DEMOGRAPHIC SUMMARY
+# ------------------------------------------------------------
+
+metro_demographics <- tract_race %>%
+  sf::st_drop_geometry() %>%
+  dplyr::group_by(urban_name, variable) %>%
+  dplyr::summarise(
+    population = sum(estimate, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  tidyr::pivot_wider(
+    names_from = variable,
+    values_from = population
+  ) %>%
+  dplyr::mutate(
+    total_population = white + black + asian + hispanic,
+    pct_white = 100 * white / total_population,
+    pct_black = 100 * black / total_population,
+    pct_asian = 100 * asian / total_population,
+    pct_hispanic = 100 * hispanic / total_population
+  ) %>%
+  dplyr::left_join(
+    tract_race %>%
+      sf::st_drop_geometry() %>%
+      dplyr::distinct(geoid_x, urban_name) %>%
+      dplyr::count(urban_name, name = "census_tracts"),
+    by = "urban_name"
+  ) %>%
+  dplyr::select(
+    urban_name,
+    census_tracts,
+    total_population,
+    pct_white,
+    pct_black,
+    pct_asian,
+    pct_hispanic
+  ) %>%
+  dplyr::mutate(
+    total_population = scales::comma(total_population),
+    dplyr::across(
+      starts_with("pct_"),
+      ~round(.x, 1)
+    )
+  )
+
+metro_demographics
+
+knitr::kable(
+  metro_demographics,
+  caption = "Demographic Characteristics of the Analytic Metropolitan Regions"
+)
+```
+
+
+
+```{r, message=F, warning=F}
+# ------------------------------------------------------------
+# ANALYTIC SAMPLE CHARACTERISTICS
+# ------------------------------------------------------------
+
+sample_characteristics <- tract_data %>%
+  sf::st_drop_geometry() %>%
+  dplyr::summarise(
+    metropolitan_regions = dplyr::n_distinct(region_name),
+    census_tracts = dplyr::n(),
+    total_population = sum(total_pop, na.rm = TRUE),
+    mean_black_share = mean(black_share, na.rm = TRUE),
+    median_home_value = median(med_value, na.rm = TRUE)
+  )
+
+sample_characteristics
+
+```
+
+
+
+```{r, message=F, warning=F}
+# ------------------------------------------------------------
+# Unit of Analysis
+#
+# The unit of analysis is the census tract. Consistent with the
+# urban segregation literature, census tracts are used as proxies
+# for neighborhoods within each metropolitan region.
+# ------------------------------------------------------------
+```
+
+
+
+```{r, message=F, warning=F}
+
+# ------------------------------------------------------------
+# RQ1: GLOBAL SEGREGATION MEASURES
+#
+# How do conventional segregation indices characterize patterns
+# of Black/non-Black residential segregation across regions?
+#
+# Baseline measures:
+#   - Index of Dissimilarity (D)
+#   - Theil's H (entropy-based segregation)
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+# RQ1: GLOBAL MEASURES 
+# ------------------------------------------------------------
+
+library(segregation)
+
+# Step 1: build Black / NonBlack structure
+seg_data <- tract_data %>%
+  sf::st_drop_geometry() %>%
+  dplyr::mutate(
+    nonblack_pop = total_pop - black_pop
+  ) %>%
+  dplyr::select(region_name, GEOID, black_pop, nonblack_pop) %>%
+  tidyr::pivot_longer(
+    cols = c(black_pop, nonblack_pop),
+    names_to = "group",
+    values_to = "pop"
+  ) %>%
+  dplyr::mutate(
+    group = if_else(group == "black_pop", "Black", "NonBlack")
+  )
+
+# ------------------------------------------------------------
+# Step 2: Dissimilarity Index (D)
+# ------------------------------------------------------------
+
+dissimilarity_results <- seg_data %>%
+  dplyr::group_by(region_name) %>%
+  dplyr::group_modify(~{
+    segregation::dissimilarity(
+      .x,
+      group = "group",
+      unit = "GEOID",
+      weight = "pop"
+    )
+  }) %>%
+  dplyr::ungroup() %>%
+  dplyr::transmute(
+    region_name,
+    D_index = est
+  )
+
+# ------------------------------------------------------------
+# Step 3: Theil's H (mutual information)
+# ------------------------------------------------------------
+
+theil_results <- seg_data %>%
+  dplyr::group_by(region_name) %>%
+  dplyr::group_modify(~{
+    segregation::mutual_total(
+      .x,
+      group = "group",
+      unit = "GEOID",
+      weight = "pop"
+    )
+  }) %>%
+  dplyr::ungroup() %>%
+  tidyr::pivot_wider(
+    names_from = stat,
+    values_from = est
+  ) %>%
+  dplyr::transmute(
+    region_name,
+    H_global = H,
+    M_global = M
+  )
+
+# ------------------------------------------------------------
+# Step 4: Combine
+# ------------------------------------------------------------
+
+RQ1_global <- dissimilarity_results %>%
+  dplyr::left_join(theil_results, by = "region_name") %>%
+  dplyr::mutate(
+    D_minus_H = D_index - H_global
+  )
+
+knitr::kable(
+  RQ1_global,
+  caption = "RQ1 Global Segregation Measures"
+)
+
+RQ1_global
+
+```
+
+
+
+
+```{r, message=F, warning=F}
+
+# ------------------------------------------------------------
+# RQ1 STANDARDIZED OUTPUT (CRITICAL FOR DOWNSTREAM INTEGRATION)
+# ------------------------------------------------------------
+
+RQ1_global_clean <- RQ1_global %>%
+  dplyr::rename(
+    region_name = region_name
+  ) %>%
+  dplyr::mutate(
+    D_index = as.numeric(D_index),
+    H_global = as.numeric(H_global),
+    D_minus_H = as.numeric(D_minus_H)
+  )
+
+
+
+```
+
+
+
+```{r, message=F, warning=F}
+# ------------------------------------------------------------
+# RQ1 REVISION TABLE (EDITOR-ALIGNED INTERPRETIVE SUMMARY)
+# ------------------------------------------------------------
+
+RQ1_interpretation <- RQ1_global_clean %>%
+  dplyr::mutate(
+    segregation_profile = dplyr::case_when(
+      D_index > 0.6 ~ "High conventional segregation",
+      D_index > 0.4 ~ "Moderate segregation",
+      TRUE ~ "Lower conventional segregation"
+    ),
+    topology_gap = dplyr::case_when(
+      abs(D_minus_H) > 0.15 ~ "Strong mismatch (structure not captured)",
+      abs(D_minus_H) > 0.05 ~ "Moderate mismatch",
+      TRUE ~ "Convergent measures"
+    )
+  ) %>%
+  dplyr::select(region_name, D_index, H_global, D_minus_H, segregation_profile, topology_gap)
+
+knitr::kable(
+  RQ1_interpretation,
+  caption = "RQ1 (Revised): Baseline Segregation vs Entropy-Based Structure"
+)
+
+ RQ1_interpretation
+```
+
+
+
+
+```{r, message=F, warning=F}
+# ------------------------------------------------------------
+# MASTER REGION KEY (CRITICAL PIPELINE FIX)
+# ------------------------------------------------------------
+
+region_key <- tract_data %>%
+  sf::st_drop_geometry() %>%
+  dplyr::distinct(region_name) %>%
+  dplyr::mutate(region_id = region_name)
+
+```
+
+
+
+
+```{r, message=F, warning=F}
+tract_data <- tract_data %>%
+  dplyr::mutate(
+    region_id = region_name
+  )
+
+```
+
+
+
+```{r, message=F, warning=F}
+
+RQ1_global_clean <- RQ1_global_clean %>%
+  dplyr::mutate(region_id = region_name)
+
+RQ1_global_clean
+```
+
+
+
+
+```{r, message=F, warning=F}
+
+# ------------------------------------------------------------
+# RQ2: DISTANCE-BASED / TOPOLOGICAL STRUCTURE
+# ------------------------------------------------------------
+
+# Ensure consistent region key
+tract_data <- tract_data %>%
+  dplyr::mutate(region_id = region_name)
+
+# ------------------------------------------------------------
+# Centroids for spatial structure
+# ------------------------------------------------------------
+
+tract_centroids <- tract_data %>%
+  sf::st_centroid() %>%
+  sf::st_transform(3857) %>%
+  dplyr::select(
+    region_id,
+    GEOID,
+    black_share,
+    edu_rate,
+    med_value,
+    total_pop,
+    geometry
+  )
+```
+
+
+
+```{r, message=F, warning=F}
+
+# ------------------------------------------------------------
+# Spatial weights by region
+# ------------------------------------------------------------
+
+# spatial weights (Gaussian kernel within each urban region)
+
+tract_centroids <- tract_data %>%
+  sf::st_centroid() %>%
+  dplyr::select(
+    region_id, region_name, GEOID,
+    black_share, edu_rate, med_value, total_pop
+  )
+
+build_weights <- function(sf_region, radius = 5000) {
+  
+  coords <- sf::st_coordinates(sf_region)
+  
+  if (nrow(coords) < 2) return(NULL)
+  
+  dists <- as.matrix(dist(coords))
+  
+  W <- exp(-(dists^2 / radius^2))
+  diag(W) <- 0
+  
+  W
+}
+
+weights_list <- tract_centroids %>%
+  dplyr::group_split(region_id) %>%
+  rlang::set_names(unique(tract_centroids$region_id)) %>%
+  lapply(build_weights)
+
+length(weights_list)
+names(weights_list)
+```
+
+
+
+```{r, message=F, warning=F}
+
+# ------------------------------------------------------------
+# RQ1: SPATIAL SEGREGATION (NEIGHBORHOOD STRUCTURE)
+# ------------------------------------------------------------
+
+library(purrr)
+
+# Step 1: Build neighbor lists by region
+tract_nb <- tract_data %>%
+  dplyr::group_by(region_id) %>%
+  dplyr::group_split() %>%
+  purrr::map(~{
+    
+    nb <- spdep::poly2nb(.x, queen = TRUE)
+    
+    list(
+      data = .x,
+      nb = nb
+    )
+  })
+
+# Step 2: Compute spatial isolation (Black share in neighbors vs self)
+
+spatial_measures <- purrr::map_dfr(tract_nb, function(obj) {
+  
+  df <- obj$data
+  nb <- obj$nb
+  
+  n <- nrow(df)
+  
+  # guard clause
+  if (n < 2) {
+    return(tibble(
+      region_id = unique(df$region_id),
+      region_name = unique(df$region_name),
+      black_neighbor_mean = NA_real_,
+      black_share_mean = mean(df$black_share, na.rm = TRUE),
+      isolation_index = NA_real_
+    ))
+  }
+  
+  black_share <- df$black_share
+  
+  black_neighbors <- purrr::map_dbl(seq_len(n), function(i) {
+    neigh <- nb[[i]]
+    if (length(neigh) == 0) return(NA_real_)
+    mean(black_share[neigh], na.rm = TRUE)
+  })
+  
+  tibble(
+    region_id = unique(df$region_id),
+    region_name = unique(df$region_name),
+    black_neighbor_mean = mean(black_neighbors, na.rm = TRUE),
+    black_share_mean = mean(black_share, na.rm = TRUE),
+    isolation_index = mean(black_neighbors - black_share, na.rm = TRUE)
+  )
+})
+
+# Step 3: Inspect
+knitr::kable(
+  spatial_measures,
+  caption = "RQ1: Spatial Segregation (Neighbor-Based Measures)"
+)
+
+spatial_measures
+```
+
+
+
+
+```{r, message=F, warning=F}
+
+
+```
+
+
+
+
+
+```{r, message=F, warning=F}
+
+
+```
+
+
+
+```{r, message=F, warning=F}
+
+
+```
+
+
+
+
+```{r, message=F, warning=F}
+
+
+```
+
+
+
+
+
+
+```{r, message=F, warning=F}
+
+
+```
+
+
+
+```{r, message=F, warning=F}
+
+
+```
+
+
+
+
+```{r, message=F, warning=F}
+
+
+```
+
+
+
+```{r, message=F, warning=F}
+# tracts in large urbanized areas (KS, VA, NC)
+# KS tracts in large urbanized areas
+ks_urban_tracts <- ks_acs_data %>%
+  st_join(us_urban_areas, left = FALSE) %>%   # inner spatial join
+  janitor::clean_names() %>%
+  dplyr::mutate(state = "KS")
+
+# VA tracts in large urbanized areas
+va_urban_tracts <- va_acs_data %>%
+  st_join(us_urban_areas, left = FALSE) %>%
+  janitor::clean_names() %>%
+  dplyr::mutate(state = "VA")
+
+# NC tracts in large urbanized areas
+nc_urban_tracts <- nc_acs_data %>%
+  st_join(us_urban_areas, left = FALSE) %>%
+  janitor::clean_names() %>%
+  dplyr::mutate(state = "NC")
+
+# combined
+tract_race <- dplyr::bind_rows(
+  ks_urban_tracts,
+  va_urban_tracts,
+  nc_urban_tracts
+)
+
+```
+
+```{r, message=F, warning=F}
+# Create urban_data objects for dissimilarity analysis
+ks_urban_data <- ks_urban_tracts %>% 
+  select(GEOID = geoid_x, urban_name, variable, estimate = estimate) %>%
+  filter(variable %in% c("white", "black"))
+
+va_urban_data <- va_urban_tracts %>% 
+  select(GEOID = geoid_x, urban_name, variable, estimate = estimate) %>%
+  filter(variable %in% c("white", "black"))
+
+nc_urban_data <- nc_urban_tracts %>% 
+  select(GEOID = geoid_x, urban_name, variable, estimate = estimate) %>%
+  filter(variable %in% c("white", "black"))
+
+```
+
+```{r, message=F, warning=F}
+# main ACS variables: Black pop, education, housing
+vars_main <- c(
+  total_pop = "B03002_001",
+  black     = "B03002_004",
+  bach_plus = "B15003_022",   # bachelor’s degree or higher (start)
+  med_value = "B25077_001"    # median home value
+)
+
+ks_main <- get_acs(
+  geography = "tract",
+  variables = vars_main,
+  state     = "KS",
+  geometry  = TRUE,
+  year      = acs_year,
+  output    = "wide",
+  survey    = "acs5"
+)
+
+va_main <- get_acs(
+  geography = "tract",
+  variables = vars_main,
+  state     = "VA",
+  geometry  = TRUE,
+  year      = acs_year,
+  output    = "wide",
+  survey    = "acs5"
+)
+
+nc_main <- get_acs(
+  geography = "tract",
+  variables = vars_main,
+  state     = "NC",
+  geometry  = TRUE,
+  year      = acs_year,
+  output    = "wide",
+  survey    = "acs5"
+)
+
+tract_main <- dplyr::bind_rows(ks_main, va_main, nc_main) %>%
+  janitor::clean_names() %>%
+  dplyr::transmute(
+    geoid,
+    total_pop = total_pop_e,
+    black_pop = black_e,
+    bach_plus = bach_plus_e,
+    med_value = med_value_e,
+    geometry
+  )
+
+```
+
+```{r, message=F, warning=F}
+# merge with the UA information
+tract_data <- tract_race %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(geoid_x, urban_name, state) %>%  # Use geoid_x from spatial join
+  dplyr::distinct() %>%
+  dplyr::rename(GEOID = geoid_x) %>%  # Standardize name
+  dplyr::left_join(
+    tract_main %>% dplyr::rename(GEOID = geoid),  # Standardize tract_main
+    by = "GEOID"
+  ) %>%
+  sf::st_as_sf() %>%
+  dplyr::filter(total_pop > 0) %>%
+  dplyr::mutate(
+    region_id   = urban_name,
+    region_name = urban_name,
+    black_share = black_pop / total_pop,
+    edu_rate    = bach_plus / total_pop
+  ) %>%
+  sf::st_transform(3857)
+
+```
+
+```{r, message=F, warning=F}
+# spatial weights (Gaussian kernel within each urban region)
+library(spdep)
+
+# Get tract centroids for distance calculations
+tract_centroids <- tract_data %>%
+  sf::st_centroid() %>%
+  dplyr::select(
+    region_id, region_name, GEOID,
+    black_share, edu_rate, med_value, total_pop
+  )
+
+# Function to build Gaussian kernel weights for one region
+build_weights <- function(sf_region, radius = 5000) {  # 5km bandwidth
+  coords <- sf::st_coordinates(sf_region)
+  dists  <- sp::spDists(coords, longlat = FALSE)      # Euclidean distances
+  h <- radius
+  W <- exp(-(dists^2 / h^2))                          # Gaussian kernel
+  diag(W) <- 0                                        # No self-weights
+  W
+}
+
+# Create weights list for each urban region
+weights_list <- tract_centroids %>%
+  dplyr::group_split(region_id) %>%
+  rlang::set_names(unique(tract_centroids$region_id)) %>%
+  lapply(build_weights)
+
+# Quick check: how many regions?
+length(weights_list)
+names(weights_list)
+
+```
+
+### RQ1: Global measures
+
+```{r, message=F, warning=F}
+# Prepare segregation data (Black vs NonBlack)
+seg_data <- tract_data %>%
+  dplyr::mutate(nonblack_pop = total_pop - black_pop) %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(region_id, region_name, GEOID, black_pop, nonblack_pop) %>%
+  tidyr::pivot_longer(
+    c(black_pop, nonblack_pop),
+    names_to  = "group",
+    values_to = "n"
+  ) %>%
+  dplyr::mutate(group = dplyr::if_else(group == "black_pop", "Black", "NonBlack"))
+
+# Global entropy index per region / Global segregation index (Mutual Information M and Theil's H)
+global_seg <- seg_data %>%
+  dplyr::group_by(region_id, region_name) %>%
+  dplyr::group_modify(~{
+    # Use mutual_total() which returns both M and H
+    mutual_total(.x, 
+                 group = "group", 
+                 unit = "GEOID", 
+                 weight = "n")
+  }) %>%
+  dplyr::ungroup() %>%
+  tidyr::pivot_wider(names_from = "stat", values_from = "est") %>%
+  dplyr::rename(
+    H_global = H,
+    M_global = M
+  )
+
+print(global_seg)
+
+```
+
+#### Dissimilarity estimates
+
+#### Multi-group estimates
+
+
+```{r, message=F, warning=F}
+# Neighbor-based spatial segregation (your working code)
+tract_nb <- tract_data %>%
+  group_by(region_id) %>%
+  group_modify(~{
+    nb <- poly2nb(.x, queen = TRUE)
+    lw <- nb2listw(nb, style = "W", zero.policy = TRUE)
+    .x$nb_obj <- list(lw)
+    .x
+  })
+
+# Simple local isolation measure using neighbors (no matrix dimension issues)
+local_isolation <- tract_data %>%
+  dplyr::mutate(
+    # Count Black neighbors vs total neighbors
+    n_black_neighbors = map_int(tract_nb$nb_obj, ~{
+      neighbors <- unlist(.x$neighbours)
+      if(length(neighbors) == 0) return(0)
+      sum(tract_data$black_pop[neighbors], na.rm = TRUE)
+    }),
+    n_total_neighbors = map_int(tract_nb$nb_obj, ~length(unlist(.x$neighbours))),
+    black_neighbor_share = dplyr::if_else(
+      n_total_neighbors > 0, 
+      n_black_neighbors / n_total_neighbors, 
+      black_share
+    )
+  )
+
+
+```
+
+```{r, message=F, warning=F}
+# spatial segregation
+spatial_seg <- local_isolation %>%
+  dplyr::group_by(region_id, region_name) %>%
+  dplyr::summarise(
+    black_neighbor_mean = mean(black_neighbor_share, na.rm = TRUE),
+    black_global_mean   = mean(black_share, na.rm = TRUE),
+    isolation_diff     = mean(black_neighbor_share - black_share, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+
+```{r, message=F, warning=F}
+# DISSIMILARITY INDEX (your original code - unified)
+dissimilarity_results <- bind_rows(
+  ks_urban_data %>% 
+    group_by(urban_name) %>%
+    group_modify(~ dissimilarity(.x, group = "variable", unit = "GEOID", weight = "estimate")) %>%
+    mutate(state = "KS"),
+  va_urban_data %>% 
+    group_by(urban_name) %>%
+    group_modify(~ dissimilarity(.x, group = "variable", unit = "GEOID", weight = "estimate")) %>%
+    mutate(state = "VA"),
+  nc_urban_data %>% 
+    group_by(urban_name) %>%
+    group_modify(~ dissimilarity(.x, group = "variable", unit = "GEOID", weight = "estimate")) %>%
+    mutate(state = "NC")
+) %>%
+  rename(dissimilarity_D = est) %>%
+  select(urban_name, dissimilarity_D, state)
+
+```
+
+```{r, message=F, warning=F}
+# RQ1 FINAL: All three measures integrated
+RQ1_complete <- global_seg %>%
+  left_join(spatial_seg, by = c("region_id", "region_name")) %>%
+  left_join(dissimilarity_results, by = c("region_id" = "urban_name")) %>%
+  mutate(
+    D_vs_H = dissimilarity_D - H_global,
+    spatial_reveal = case_when(
+      abs(isolation_diff) > 0.05 ~ "Spatial structure revealed",
+      TRUE ~ "Global measures sufficient"
+    )
+  ) %>%
+  select(region_name, dissimilarity_D, H_global, black_neighbor_mean, isolation_diff, D_vs_H, spatial_reveal) %>%
+  mutate(across(where(is.numeric), ~round(.x, 3)))
+
+kable(RQ1_complete, caption = "RQ1: Dissimilarity D vs Theil H Global vs Spatial Neighbors")
+
+```
+
+```{r, message=F, warning=F}
+# Multi-Group Segregation Indices
+# Multi-group mutual information (your original code - unified)
+multigroup_results <- bind_rows(
+  mutual_within(ks_urban_data, group = "variable", unit = "GEOID", weight = "estimate", within = "urban_name", wide = TRUE) %>%
+    mutate(state = "KS"),
+  mutual_within(va_urban_data, group = "variable", unit = "GEOID", weight = "estimate", within = "urban_name", wide = TRUE) %>%
+    mutate(state = "VA"),
+  mutual_within(nc_urban_data, group = "variable", unit = "GEOID", weight = "estimate", within = "urban_name", wide = TRUE) %>%
+    mutate(state = "NC")
+)
+
+kable(multigroup_results %>% select(urban_name, M, H), caption = "Multi-group Segregation (Mutual Info + Theil H)")
+
+
+```
+
+
+### RQ2: Distance-based clustering
+
+
+```{r, message=F, warning=F}
+## RQ2: Topological clustering (NA/Inf SAFE)
+
+# 1. SAFE STANDARDIZATION (handles zero variance & NAs)
+tract_rq2 <- tract_data %>%
+  dplyr::group_by(region_id) %>%
+  dplyr::mutate(
+    # Safe scaling function
+    z_black_share = case_when(
+      total_pop == 0 ~ NA_real_,
+      TRUE ~ as.numeric(scale(black_share, center = TRUE, scale = TRUE)[,1])
+    ),
+    z_edu_rate = case_when(
+      total_pop == 0 ~ NA_real_,
+      TRUE ~ as.numeric(scale(edu_rate, center = TRUE, scale = TRUE)[,1])
+    ),
+    z_housing = case_when(
+      total_pop == 0 ~ NA_real_,
+      TRUE ~ as.numeric(scale(med_value, center = TRUE, scale = TRUE)[,1])
+    )
+  ) %>%
+  dplyr::filter(!is.na(total_pop), total_pop > 0) %>%  # Remove zero-pop tracts
+  dplyr::group_by(region_id) %>%
+  dplyr::filter(
+    # Only keep regions with enough variation
+    var(black_share, na.rm = TRUE) > 0 | 
+    var(edu_rate, na.rm = TRUE) > 0 | 
+    var(med_value, na.rm = TRUE) > 0
+  ) %>%
+  sf::st_drop_geometry()
+
+#print(paste("Regions ready for RQ2:", length(unique(tract_rq2$region_id))))
+#print(paste("Tracts ready for RQ2:", nrow(tract_rq2)))
+
+
+```
+
+```{r, message=F, warning=F}
+## RQ2 Step 2: SAFE CLUSTERING (no group_modify)
+
+# Manual standardization (safe from NA/Inf errors)
+tract_rq2 <- tract_data %>%
+  dplyr::mutate(
+    black_share_safe = dplyr::if_else(total_pop > 0, black_share, NA_real_),
+    edu_rate_safe    = dplyr::if_else(total_pop > 0, edu_rate, NA_real_),
+    housing_safe     = dplyr::if_else(total_pop > 0, med_value, NA_real_)
+  ) %>%
+  dplyr::filter(!is.na(black_share_safe), !is.na(edu_rate_safe), !is.na(housing_safe))
+
+# Standardize WITHIN regions using split-apply-combine
+cluster_results <- tract_rq2 %>%
+  dplyr::group_split(region_id, .keep = TRUE) %>%
+  purrr::map_dfr(~{
+    region_id <- unique(.x$region_id)
+    
+    # Safe z-score (handles zero variance)
+    z_black <- scale(.x$black_share_safe)[,1]
+    z_edu   <- scale(.x$edu_rate_safe)[,1]  
+    z_house <- scale(.x$housing_safe)[,1]
+    
+    # Only cluster if enough data & variation
+    if(length(unique(z_black[!is.na(z_black)])) > 1 & nrow(.x) >= 4) {
+      kmeans_result <- kmeans(cbind(z_black, z_edu, z_house), centers = 4, nstart = 25)
+      cluster_id <- kmeans_result$cluster
+    } else {
+      cluster_id <- rep(1, nrow(.x))
+    }
+    
+    .x %>%
+      dplyr::mutate(
+        cluster = as.factor(cluster_id),
+        z_black_share = as.numeric(z_black),
+        z_edu_rate = as.numeric(z_edu),
+        z_housing = as.numeric(z_house)
+      )
+  })
+
+# print("Clustering complete!")
+# print(paste("Regions:", length(unique(cluster_results$region_id))))
+# print(paste("Tracts:", nrow(cluster_results)))
+
+```
+
+```{r, message=F, warning=F}
+## RQ2 Step 3: CORRECTED Profiles (Drop geometry first)
+
+# Drop geometry from cluster_results to avoid sf/dplyr join conflicts
+cluster_results_no_geom <- cluster_results %>%
+  sf::st_drop_geometry()
+
+# Get totals per region
+region_totals <- cluster_results_no_geom %>%
+  dplyr::count(region_id, name = "total_tracts")
+
+# Create profiles
+RQ2_profiles <- cluster_results_no_geom %>%
+  dplyr::group_by(region_id, cluster) %>%
+  dplyr::summarise(
+    n_tracts      = dplyr::n(),
+    mean_black_z  = round(mean(z_black_share, na.rm = TRUE), 2),
+    mean_edu_z    = round(mean(z_edu_rate, na.rm = TRUE), 2),
+    mean_housing_z = round(mean(z_housing, na.rm = TRUE), 2),
+    .groups = "drop"
+  ) %>%
+  dplyr::left_join(region_totals, by = "region_id") %>%
+  dplyr::mutate(
+    pct_tracts = round(100 * n_tracts / total_tracts, 1)
+  ) %>%
+  dplyr::select(-total_tracts) %>%
+  dplyr::arrange(region_id, desc(n_tracts))
+
+# print("=== RQ2 PROFILES COMPLETE ===")
+# print(RQ2_profiles)
+
+```
+
+```{r, message=F, warning=F}
+# Join clusters back to tract_data (drop geometry first for join)
+cluster_lookup <- cluster_results_no_geom %>%
+  dplyr::select(region_id, GEOID, cluster)
+
+tract_with_clusters <- tract_data %>%
+  dplyr::left_join(cluster_lookup, by = c("region_id", "GEOID")) %>%
+  dplyr::mutate(cluster = forcats::fct_explicit_na(as.factor(cluster), "1"))
+
+# print(paste("Mapping ready:", nrow(tract_with_clusters), "tracts"))
+
+
+```
+
+```{r, message=F, warning=F}
+RQ2_table <- RQ2_profiles %>%
+  dplyr::select(
+    Region = region_id,
+    Cluster = cluster,
+    N = n_tracts,
+    `%` = pct_tracts,
+    `Black z` = mean_black_z,
+    `Edu z` = mean_edu_z,
+    `House z` = mean_housing_z
+  ) %>%
+  dplyr::arrange(Region, desc(N))
+
+#print("=== RQ2 PUBLICATION TABLE ===")
+#print(RQ2_table)
+
+
+```
+
+```{r, eval=T, message=F, warning=F}
+library(ggplot2)
+
+# Show your actual regions
+print("Your regions (first 6):")
+print(sort(unique(RQ2_profiles$region_id))[1:6])
+
+# Map FIRST 3 regions with data
+regions_to_map <- unique(RQ2_profiles$region_id)[1:3]
+
+for(region in regions_to_map) {
+  map_data <- tract_with_clusters %>%
+    dplyr::filter(region_id == region) %>%
+    dplyr::filter(!is.na(cluster))
+  
+  if(nrow(map_data) > 3) {
+    p <- ggplot(map_data) +
+      geom_sf(aes(fill = cluster), color = NA, alpha = 0.8) +
+      scale_fill_brewer(palette = "Set1", name = "Topology\nCluster") +
+      labs(
+        title = region,
+        subtitle = "Black share • Education • Housing\n(z-score clusters)"
+      ) +
+      theme_void() +
+      theme(legend.position = "bottom")
+    print(p)
+  }
+}
+
+
+```
+
+```{r, eval=T, message=F, warning=F}
+library(ggplot2)
+#install.packages("ggpattern") # if needed
+library(ggpattern)  
+library(dplyr)
+
+regions_to_map <- unique(RQ2_profiles$region_id)[1:6]
+
+for (region in regions_to_map) {
+  map_data <- tract_with_clusters %>%
+    filter(region_id == region, !is.na(cluster))
+  
+  if (nrow(map_data) > 3) {
+    p <- ggplot(map_data) +
+      geom_sf_pattern(
+        aes(fill = cluster, pattern = cluster),
+        color = "grey20",
+        pattern_fill = "grey20",
+        pattern_color = "grey20",
+        pattern_density = 0.4,
+        alpha = 0.7
+      ) +
+      scale_fill_grey(name = "Cluster") +
+      scale_pattern_manual(
+        name   = "Cluster",
+        values = c("1" = "stripe", "2" = "crosshatch", 
+                   "3" = "circle", "4" = "none")
+      ) +
+      labs(title = region) +
+      theme_void() +
+      theme(legend.position = "bottom")
+    
+    # Save high-res PNG for Word
+    ggsave(
+      filename = paste0("tbl-fig/", gsub("[^A-Za-z0-9]", "_", region), "_clusters.png"),
+      plot    = p,
+      width   = 7, height = 6, units = "in",
+      dpi     = 600,  # Publication quality
+      bg      = "white"
+    )
+  }
+}
+
+
+
+```
+
+```{r, eval=T, message=F, warning=F}
+library(ggplot2)
+library(dplyr)
+
+regions_to_map <- unique(RQ2_profiles$region_id)[1:6]
+
+for (region in regions_to_map) {
+  map_data <- tract_with_clusters %>%
+    filter(region_id == region, !is.na(cluster))
+  
+  if (nrow(map_data) > 3) {
+    p <- ggplot(map_data) +
+      geom_sf(
+        aes(fill = cluster, linetype = cluster),
+        color = "black",
+        size = 0.15
+      ) +
+      scale_fill_grey(start = 0.9, end = 0.2, name = "Cluster") +
+      scale_linetype_manual(
+        name   = "Cluster",
+        values = c("1" = "solid", "2" = "dashed", 
+                   "3" = "dotted", "4" = "dotdash")
+      ) +
+      labs(title = region) +
+      theme_void() +
+      theme(legend.position = "bottom")
+    
+    # Save high-res PNG for Word
+    ggsave(
+      filename = paste0("tbl-fig/", gsub("[^A-Za-z0-9]", "_", region), "_clusters_bw.png"),
+      plot    = p,
+      width   = 7, height = 6, units = "in",
+      dpi     = 600,  # Publication quality
+      bg      = "white"
+    )
+  }
+}
+
+
+
+```
+
+
+
+
+
+
+
+
+
