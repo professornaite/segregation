@@ -135,6 +135,114 @@ us_urban_areas <- get_acs(
 
 ```
 
+
+```{r, message=F, warning=F}
+# ------------------------------------------------------------
+# CONSTRUCT tract_data: analytic tract-level dataset
+# ------------------------------------------------------------
+
+# 1) Tracts in large urbanized areas (KS, VA, NC)
+ks_urban_tracts <- ks_acs_data %>%
+  sf::st_join(us_urban_areas, left = FALSE) %>%        # inner spatial join
+  janitor::clean_names() %>%
+  dplyr::mutate(state = "KS")
+
+va_urban_tracts <- va_acs_data %>%
+  sf::st_join(us_urban_areas, left = FALSE) %>%
+  janitor::clean_names() %>%
+  dplyr::mutate(state = "VA")
+
+nc_urban_tracts <- nc_acs_data %>%
+  sf::st_join(us_urban_areas, left = FALSE) %>%
+  janitor::clean_names() %>%
+  dplyr::mutate(state = "NC")
+
+# combined race/ethnicity tract data
+tract_race <- dplyr::bind_rows(
+  ks_urban_tracts,
+  va_urban_tracts,
+  nc_urban_tracts
+)
+
+# 2) Main ACS variables: total pop, Black pop, education, housing
+vars_main <- c(
+  total_pop = "B03002_001",
+  white     = "B03002_003",  # Not Hispanic White alone
+  black     = "B03002_004",  # Not Hispanic Black alone
+  asian     = "B03002_006",  # Not Hispanic Asian alone
+  hispanic  = "B03002_012",  # Hispanic or Latino, any race
+  bach_plus = "B15003_022",  # bachelor's degree or higher
+  med_value = "B25077_001"   # median home value
+)
+
+ks_main <- tidycensus::get_acs(
+  geography = "tract",
+  variables = vars_main,
+  state     = "KS",
+  geometry  = TRUE,
+  year      = acs_year,
+  output    = "wide",
+  survey    = "acs5"
+)
+
+va_main <- tidycensus::get_acs(
+  geography = "tract",
+  variables = vars_main,
+  state     = "VA",
+  geometry  = TRUE,
+  year      = acs_year,
+  output    = "wide",
+  survey    = "acs5"
+)
+
+nc_main <- tidycensus::get_acs(
+  geography = "tract",
+  variables = vars_main,
+  state     = "NC",
+  geometry  = TRUE,
+  year      = acs_year,
+  output    = "wide",
+  survey    = "acs5"
+)
+
+tract_main <- dplyr::bind_rows(ks_main, va_main, nc_main) %>%
+  janitor::clean_names() %>%
+  dplyr::transmute(
+    geoid,
+    total_pop  = total_pop_e,
+    white_pop  = white_e,
+    black_pop  = black_e,
+    asian_pop  = asian_e,
+    hispanic_pop = hispanic_e,
+    bach_plus  = bach_plus_e,
+    med_value  = med_value_e,
+    geometry
+  )
+
+# 3) Merge urban-area membership with main ACS variables
+tract_data <- tract_race %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(geoid_x, urban_name, state) %>%
+  dplyr::distinct() %>%
+  dplyr::rename(GEOID = geoid_x) %>%
+  dplyr::left_join(
+    tract_main %>% dplyr::rename(GEOID = geoid),
+    by = "GEOID"
+  ) %>%
+  sf::st_as_sf() %>%
+  dplyr::filter(total_pop > 0) %>%
+  dplyr::mutate(
+    region_id   = urban_name,
+    region_name = urban_name,
+    black_share = black_pop / total_pop,
+    edu_rate    = bach_plus / total_pop,
+    med_value   = med_value
+  ) %>%
+  sf::st_transform(3857)
+```
+
+## Metro Summaries (Table 1 revision)
+
 ```{r, message=F, warning=F}
 # ------------------------------------------------------------
 # METRO-LEVEL ANALYTIC DATASET (for Table 1 revision)
@@ -150,16 +258,16 @@ metro_summary <- tract_data %>%
     total_population = sum(total_pop, na.rm = TRUE),
 
     # racial composition (counts)
-    black_population = sum(black_pop, na.rm = TRUE),
-    white_population = sum(total_pop - black_pop, na.rm = TRUE),
+    white_population  = sum(white_pop, na.rm = TRUE),
+    black_population  = sum(black_pop, na.rm = TRUE),
+    asian_population  = sum(asian_pop, na.rm = TRUE),
+    hispanic_population = sum(hispanic_pop, na.rm = TRUE),
 
     # derived shares
-    pct_black = black_population / total_population,
-    pct_white = white_population / total_population,
-
-    # placeholders (will become nonzero after we compute Asian/Hispanic in full model data)
-    pct_asian = NA_real_,
-    pct_hispanic = NA_real_,
+    pct_white   = white_population / total_population,
+    pct_black   = black_population / total_population,
+    pct_asian   = asian_population / total_population,
+    pct_hispanic = hispanic_population / total_population,
 
     .groups = "drop"
   )
@@ -168,10 +276,9 @@ metro_summary <- tract_data %>%
 ```
 
 
+
 ```{r, message=F, warning=F}
-# ------------------------------------------------------------
-# DATA FILTERING SUMMARY (for reproducibility)
-# ------------------------------------------------------------
+# DATA FILTERING
 
 initial_tracts <- tract_data %>%
   sf::st_drop_geometry() %>%
@@ -205,7 +312,7 @@ excluded_summary %>%
 # TABLE 1: BINARY Descriptive Statistics for the Analytic Sample
 # ------------------------------------------------------------
 
-metro_summary <- tract_data %>%
+metro_summary_binary <- tract_data %>%
   sf::st_drop_geometry() %>%
   dplyr::group_by(region_name) %>%
   dplyr::summarise(
@@ -227,10 +334,10 @@ metro_summary <- tract_data %>%
     median_home_value = scales::dollar(round(median_home_value))
   )
 
-metro_summary
+metro_summary_binary
 
 knitr::kable(
-  metro_summary,
+  metro_summary_binary,
   caption = "Descriptive Statistics for the Analytic Metropolitan Regions"
 )
 
@@ -295,6 +402,65 @@ knitr::kable(
 )
 ```
 
+
+```{r, eval=F}
+#install.packages("flextable")
+library(flextable)
+library(officer)
+
+metro_summary_tbl <- metro_summary %>%
+  dplyr::mutate(
+    total_population = as.integer(round(total_population)),
+    white_population = as.integer(round(white_population)),
+    black_population = as.integer(round(black_population)),
+    asian_population = as.integer(round(asian_population)),
+    hispanic_population = as.integer(round(hispanic_population)),
+    pct_white      = 100 * pct_white,
+    pct_black      = 100 * pct_black,
+    pct_asian      = 100 * pct_asian,
+    pct_hispanic   = 100 * pct_hispanic
+  ) %>%
+  dplyr::select(
+    region_name,
+    total_tracts,
+    total_population,
+    white_population,
+    black_population,
+    asian_population,
+    hispanic_population,
+    pct_white,
+    pct_black,
+    pct_asian,
+    pct_hispanic
+  ) %>%
+  # rename columns here, before flextable()
+  dplyr::rename(
+    Region          = region_name,
+    Tracts          = total_tracts,
+    `Total pop.`    = total_population,
+    `White pop.`    = white_population,
+    `Black pop.`    = black_population,
+    `Asian pop.`    = asian_population,
+    `Hispanic pop.` = hispanic_population,
+    `White %`       = pct_white,
+    `Black %`       = pct_black,
+    `Asian %`       = pct_asian,
+    `Hispanic %`    = pct_hispanic
+  )
+
+metro_summary_ft <- flextable(metro_summary_tbl) %>%
+  autofit() %>%
+  theme_booktabs() %>%
+  add_header_row(
+    values = c("Descriptive Statistics for the Analytic Metropolitan Regions"),
+    colwidths = ncol(metro_summary_tbl)
+  ) %>%
+  fontsize(size = 10, part = "all") %>%
+  align(align = "center", part = "all")
+
+metro_summary_ft
+#flextable::print(metro_summary_ft, preview = "docx")
+```
 
 
 ```{r, message=F, warning=F}
@@ -590,6 +756,8 @@ names(weights_list)
 ```
 
 
+## RQ1-a: Global measures
+
 
 ```{r, message=F, warning=F}
 
@@ -872,7 +1040,7 @@ names(weights_list)
 
 ```
 
-### RQ1: Global measures
+## RQ1-b: Global measures
 
 ```{r, message=F, warning=F}
 # Prepare segregation data (Black vs NonBlack)
@@ -1015,7 +1183,7 @@ kable(multigroup_results %>% select(urban_name, M, H), caption = "Multi-group Se
 ```
 
 
-### RQ2: Distance-based clustering
+## RQ2: Distance-based clustering
 
 
 ```{r, message=F, warning=F}
