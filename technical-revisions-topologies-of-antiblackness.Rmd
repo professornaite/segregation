@@ -1,7 +1,7 @@
 ---
 title: "Revised Technical File: Conceptualizing Topologies of Antiblackness in Education"
-bibliography: brown-references.bib # include references file
-csl: apa.csl
+#bibliography: brown-references.bib # include references file
+#csl: apa.csl
 output:
   html_document:
     toc: true
@@ -50,7 +50,7 @@ library(purrr)
 library(janitor)
 options(tigris_class = "sf", tigris_use_cache = TRUE)
 
-# small helper: standardize variable names and geometry
+# standardize variable names and geometry
 clean_geo <- function(dat) {
   dat %>%
     st_transform(3857) %>%  # projected CRS for distance/weights
@@ -1182,9 +1182,7 @@ kable(multigroup_results %>% select(urban_name, M, H), caption = "Multi-group Se
 
 ```
 
-
 ## RQ2: Distance-based clustering
-
 
 ```{r, message=F, warning=F}
 ## RQ2: Topological clustering (NA/Inf SAFE)
@@ -1367,7 +1365,7 @@ for(region in regions_to_map) {
 
 ```
 
-```{r, eval=T, message=F, warning=F}
+```{r, eval=F, message=F, warning=F}
 library(ggplot2)
 #install.packages("ggpattern") # if needed
 library(ggpattern)  
@@ -1414,7 +1412,7 @@ for (region in regions_to_map) {
 
 ```
 
-```{r, eval=T, message=F, warning=F}
+```{r, eval=F, message=F, warning=F}
 library(ggplot2)
 library(dplyr)
 
