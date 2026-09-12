@@ -1,16 +1,19 @@
 ---
 title: "Revised Technical File: Conceptualizing Topologies of Antiblackness in Education"
+author: "Nathan N. Alexander, PhD"
+institute: "Howard University"
 #bibliography: brown-references.bib # include references file
 #csl: apa.csl
 output:
   html_document:
     toc: true
-    toc_depth: 2
+    toc_depth: 3
+    toc_float: true
     number_sections: true
     theme: flatly
   pdf_document:
     toc: false
-    toc_depth: 2
+    toc_depth: 4
     number_section: true 
   word_document:
     toc: false
@@ -33,8 +36,7 @@ here::i_am("technical-revisions-topologies-of-antiblackness.Rmd")
 
 ```
 
-\newpage
-
+# Setup
 
 ```{r, message=F, warning=F}
 # setup and global options
@@ -56,14 +58,21 @@ clean_geo <- function(dat) {
     st_transform(3857) %>%  # projected CRS for distance/weights
     janitor::clean_names()
 }
+```
 
+# Load data
+
+## ACS data
+
+### acs_year = 2019
+
+```{r, message=F, warning=F}
 acs_year <- 2019  # 2015–2019 ACS 5-year estimates
 cat("Using", acs_year, "ACS 5-year estimates (2015–2019).\n")
 options(tigris_class = "sf", tigris_use_cache = TRUE)
-
 ```
 
-
+### race vars
 
 ```{r, message=F, warning=F}
 # ------------------------------------------------------------
@@ -83,6 +92,21 @@ acs_vars <- c(
   asian    = "B03002_006",
   hispanic = "B03002_012"
 )
+```
+
+## districts and counties by year
+
+```{r}
+# Data from https://www.census.gov/programs-surveys/saipe/guidance-geographies/districts-counties.html
+# https://www2.census.gov/programs-surveys/saipe/guidance-geographies/districts-counties/sdlist-19.xls
+
+```
+
+## state data
+
+### Kansas
+
+```{r, message=F, warning=F}
 
 # Kansas
 ks_acs_data <- get_acs(
@@ -92,7 +116,11 @@ ks_acs_data <- get_acs(
   geometry  = TRUE,
   year      = acs_year
 )
+```
 
+### Virginia
+
+```{r, message=F, warning=F}
 # Virginia
 va_acs_data <- get_acs(
   geography = "tract",
@@ -101,7 +129,11 @@ va_acs_data <- get_acs(
   geometry  = TRUE,
   year      = acs_year
 )
+```
 
+### North Carolina
+
+```{r, message=F, warning=F}
 # North Carolina
 nc_acs_data <- get_acs(
   geography = "tract",
@@ -110,7 +142,13 @@ nc_acs_data <- get_acs(
   geometry  = TRUE,
   year      = acs_year
 )
+```
 
+## construct tract-level dataset
+
+### large urbanized areas
+
+```{r, message=F, warning=F}
 # ------------------------------------------------------------
 # Large urbanized areas (population ≥ 750,000)
 # ------------------------------------------------------------
@@ -135,6 +173,7 @@ us_urban_areas <- get_acs(
 
 ```
 
+### join urban areas with state data
 
 ```{r, message=F, warning=F}
 # ------------------------------------------------------------
@@ -163,7 +202,11 @@ tract_race <- dplyr::bind_rows(
   va_urban_tracts,
   nc_urban_tracts
 )
+```
 
+## main ACS variables
+
+```{r, message=F, warning=F}
 # 2) Main ACS variables: total pop, Black pop, education, housing
 vars_main <- c(
   total_pop = "B03002_001",
@@ -218,7 +261,11 @@ tract_main <- dplyr::bind_rows(ks_main, va_main, nc_main) %>%
     med_value  = med_value_e,
     geometry
   )
+```
 
+## merge urban areas with main ACS vars
+
+```{r, message=F, warning=F}
 # 3) Merge urban-area membership with main ACS variables
 tract_data <- tract_race %>%
   sf::st_drop_geometry() %>%
@@ -241,7 +288,7 @@ tract_data <- tract_race %>%
   sf::st_transform(3857)
 ```
 
-## Metro Summaries (Table 1 revision)
+# Metro area summaries (Table 2)
 
 ```{r, message=F, warning=F}
 # ------------------------------------------------------------
