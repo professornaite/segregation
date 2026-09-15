@@ -106,7 +106,8 @@ unlink(tmp)
 ```
 
 #### Check: Residential
-```{r check data}
+
+```{r}
 names(res_seg)
 
 dplyr::count(
@@ -216,7 +217,7 @@ unlink(tmp)
 
 #### Check: LISD
 
-```{r check data}
+```{r}
 names(lisd)
 
 lisd %>%
@@ -291,7 +292,7 @@ unlink(tmp)
 
 #### Check: Geocrosswalk
 
-```{r check data}
+```{r}
 names(geo_crosswalk)
 ```
 ### Join LISD-GEO
@@ -938,19 +939,12 @@ school_input %>%
   )
 ```
 
+
+
+
 # RQ1: Residential separation
 
 How is Black–nonBlack residential segregation distributed across the largest U.S. metropolitan areas?
-
-
-```{r}
-
-```
-
-
-```{r}
-
-```
 
 
 # RQ2: School separation
@@ -958,19 +952,10 @@ How is Black–nonBlack residential segregation distributed across the largest U
 How is Black–nonBlack school segregation distributed across the same metropolitan areas?
 
 
-```{r}
-
-```
-
-
 # RQ3: Residential-school connections
 
 To what extent do Black–nonBlack residential and school segregation converge, diverge, or compound within large U.S. metropolitan areas?
 
-
-```{r}
-
-```
 
 | Configuration | Residential separation | School separation | Interpretation |
 |---|---|---|---|
