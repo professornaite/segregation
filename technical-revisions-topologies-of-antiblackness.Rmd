@@ -940,26 +940,3 @@ school_input %>%
 ```
 
 
-
-
-# RQ1: Residential separation
-
-How is Black–nonBlack residential segregation distributed across the largest U.S. metropolitan areas?
-
-
-# RQ2: School separation
-
-How is Black–nonBlack school segregation distributed across the same metropolitan areas?
-
-
-# RQ3: Residential-school connections
-
-To what extent do Black–nonBlack residential and school segregation converge, diverge, or compound within large U.S. metropolitan areas?
-
-
-| Configuration | Residential separation | School separation | Interpretation |
-|---|---|---|---|
-| Compounding | High | High | Black separation appears across both housing and schooling |
-| Residential predominance | High | Lower | School composition is less separated than residential distribution |
-| School predominance | Lower | High | School organization produces separation beyond what the residential profile alone suggests |
-| Lower dual separation | Lower | Lower | Relative comparison case; not an absence of antiblackness |
