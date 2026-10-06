@@ -169,6 +169,7 @@ unlink(tmp)
 ```
 
 #### Check: School
+
 ```{r}
 names(sch_seg)
 
