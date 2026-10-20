@@ -1,0 +1,8 @@
+\contentsline {section}{\numberline {1}Notation and preliminaries}{2}{section.0.1}%
+\contentsline {section}{\numberline {2}Dimensions of segregation}{3}{section.0.2}%
+\contentsline {subsection}{\numberline {2.1}Evenness}{4}{subsection.0.2.1}%
+\contentsline {subsection}{\numberline {2.2}Exposure}{4}{subsection.0.2.2}%
+\contentsline {subsection}{\numberline {2.3}Concentration}{5}{subsection.0.2.3}%
+\contentsline {subsection}{\numberline {2.4}Centralization}{5}{subsection.0.2.4}%
+\contentsline {subsection}{\numberline {2.5}Clustering}{6}{subsection.0.2.5}%
+\contentsline {section}{\numberline {3}Hypersegregation}{6}{section.0.3}%

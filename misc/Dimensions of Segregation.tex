@@ -1,0 +1,405 @@
+\documentclass{report}[11pt,letterpaper]
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx} % Required for including images
+\usepackage{fancyhdr}
+\usepackage{extramarks}
+\usepackage{listings}
+\usepackage{setspace}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{color}
+\usepackage{graphicx}%,float,wrapfig}
+\usepackage{enumerate}
+\usepackage{epsfig}
+\usepackage{float}
+\usepackage{textcomp}
+\usepackage{verbatim}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{matrix}
+\usepackage{tabularx}
+\usepackage{epstopdf}
+\usepackage{mathtools} 
+\usepgfplotslibrary{patchplots}
+\usepgfplotslibrary{polar}
+ \usepgflibrary{shapes.geometric}
+ \usetikzlibrary{calc}
+ \usepackage{tkz-euclide}
+ \usepackage{setspace}
+ \usepackage{booktabs}
+\usepackage{tabularx}
+ \pgfplotsset{my style/.append style={axis x line=middle, axis y line=
+           middle, xlabel={$x$}, ylabel={$y$}, axis equal }}
+
+\renewcommand{\thesection}{\arabic{section}}
+\renewcommand{\contentsname}{Table of contents}
+
+\usepackage[hidelinks,linktoc=all]{hyperref}
+
+\begin{document}
+\begin{center}
+{\Large \sc Appendix A \\ 
+\medskip
+Hypersegregation} \\
+\vspace{.5cm}
+Nathan N. Alexander \\Quantitative Histories Workshop \\ \today \\
+\medskip
+\end{center}
+\vspace{.25cm}
+
+% spacing
+%\singlespacing
+\doublespace
+\begingroup
+    \let\clearpage\relax
+    \let\cleardoublepage\relax
+    \tableofcontents
+\endgroup
+
+\newpage
+
+This appendix outlines the assumptions and segregation measures used in the article \textit{Conceptualizing Topologies of Antiblackness in Education}\footnote{Alexander, Nathan. Forthcoming. Conceptualizing Topologies of Antiblackness in Education.}. In this article, I examine the dimensions of segregation and hypersegregation in the spatial organization of a collection of study regions: $R=\{r_1,\ldots, r_m\}$, where $r_k$ denotes the $k$th region and and $m$ is the number of regions. Regions are defined using the Metropolitan Statistical Areas (MSAs) reported by the U.S. Census Bureau\footnote{\url{https://www.census.gov/data/tables/time-series/demo/popest/2020s-metro-and-micro-statistical-areas-detail}}. Schools are located within regions. We let $S=\{s_1,\ldots,s_q\}$ denote the collection of study schools, where $s_\ell$ denotes the $\ell$th school and $q$ is the number of schools. For each region $r_k \in R$, let $S_{r_k} \subseteq S$ denote the schools located within that region.
+
+%Hypersegregation is used as a spatial indicator of antiblackness, and it is interpreted through the article's framework on residential segregation and school segregation. The indexes describe population distributions.
+
+\bigskip
+
+%%%%%%%%%%%%%
+\section{Notation and preliminaries}
+
+We let all quantities refer to a specified $k$th region, $r_k \in R$.  
+
+The number of geographic units and all regional totals may differ across regions. A given region contains $n$ mutually exclusive geographic units indexed by $i$ and $j$. Regional totals are calculated as follows:
+\[
+X = \sum_{i=1}^{n} x_i, \qquad
+Y = \sum_{i=1}^{n} y_i, \qquad
+T = \sum_{i=1}^{n} t_i, \qquad
+A = \sum_{i=1}^{n} a_i.
+\]
+
+\noindent
+where 
+
+$x_i$ is the number of members of the focal group,
+$x$, in geographic unit $i$; 
+
+$y_i$ is the number of members
+of the comparison group, $y$, in unit $i$; 
+
+$t_i$ is the
+total population of unit $i$; 
+
+$a_i$ is the land area of
+unit $i$; 
+
+$i$ and $j$ (for pairwise formulas) index geographic units within region $r$; and 
+
+$n$ is the total number of geographic units in that
+region;
+
+$X$ and $Y$ are the regional
+populations of groups $x$ and $y$, respectively; 
+
+$T$ is the total regional population; and 
+
+$A$ is the total
+land area of the region.
+
+
+\bigskip
+
+%%%%%%%%%%%%%
+\noindent
+\textbf{Assumption A.1} (Geographic partition).
+The geographic units are mutually exclusive and collectively
+exhaust region $r$.  Each member of the population under
+study is assigned to exactly one unit.
+
+
+\medskip
+
+%%%%%%%%%%%%%
+\noindent
+\textbf{Assumption A.2} (Group membership and population).
+Groups $x$ and $y$ are mutually exclusive, so that
+\[
+x_i \geq 0, \qquad y_i \geq 0, \qquad
+x_i+y_i \leq t_i.
+\]
+
+If the two groups exhaust the population under study,
+then $t_i=x_i+y_i$ and $T=X+Y$. 
+
+Otherwise, $t_i$ and $T$ include members of additional groups. 
+
+Given that we must specify whether our analysis uses the full population or a population restricted to groups $x$ and $y$, I use a set of simple modifications on variable labels to indicate different specifications. 
+
+For example, in the formulation:
+
+$$B = \sum_{i=1}^{n} b_i$$
+
+$b_i$ is used to refer to the number of members of the black population in geographic unit $i$;
+
+$B$ is the total black population across all units in the region.
+
+$$W = \sum_{i=1}^{n} w_i$$
+
+$w_i$ is used to refer to the number of members of the white population in geographic unit $i$;
+
+ $W$ is the total white population across all units in the region.
+
+\medskip
+
+\noindent When modifications are made to a measure, an explanation is provided as to how variables are defined.
+
+\medskip
+
+%%%%%%%%%%%%%
+\noindent \textbf{Assumption A.3} (Defined quantities). There are basic rules for some defined quantities.
+
+In all formulas, each denominator is positive wherever used. 
+
+I remove empty units such that any unit not meeting some population threshold contributes zero to exposure sums; equivalently, those sums run over units with $t_i>0$. 
+
+Land areas are positive for retained units. 
+
+Undefined regional measures are recorded as missing, not assigned zero.
+
+%%%%%%%%%%%%%
+\section{Dimensions of segregation}
+
+There are five dimensions of segregation defined by Massey and Denton\footnote{Massey, Douglas S., and Nancy A. Denton. ``The dimensions of residential segregation." Social Forces, vol. 67, no. 2, 1988, pp. 281-315. https://doi.org/10.1093/sf/67.2.281} in their 1988 article. 
+
+Importantly, some of the dimensions contain multiple measures. 
+
+The five dimensions of segregation are: \textit{evenness},  \textit{exposure}, \textit{concentration}, \textit{centralization}, and \textit{clustering}.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Dimensions of segregation and measures used in the study}
+\bigskip
+\label{tab:segregation-measures}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}p{0.18\textwidth}
+                               p{0.35\textwidth} X@{}}
+\toprule
+Dimension & Measure & Description \\
+\midrule
+
+Evenness
+& Index of Dissimilarity ($D$)
+& $D$ compares the proportional distribution of groups across geographic units. \\
+
+\addlinespace
+Exposure
+& Interaction (${}_{x}P_y$)
+& ${}_{x}P_y$ measures the average comparison-group, $y$, share in the unit occupied by a member of $x$. \\
+
+& Isolation (${}_{x}P_x$)
+& ${}_{x}P_x$ measures the average focal-group, $x$, share in the
+unit occupied by a co-member of $x$. \\
+
+\addlinespace
+Concentration
+& Delta Index ($\Delta$)
+& $\Delta$ compares the focal group's population shares with
+land-area shares across units. \\
+
+\addlinespace
+Centralization
+& Absolute Centralization Index ($ACE_x$)
+& $ACE_x$ measures group $x$'s distribution toward
+or away from a specified center relative to land area. \\
+
+\addlinespace
+Clustering
+& Spatial Proximity Index ($SP$)
+& $SP$ compares population-weighted within-group proximity
+with overall population proximity. \\
+
+& & $SP = \dfrac{XP_{xx} + YP_{yy}}{TP_{tt}} $, where: \\
+
+& & $P_{xx}$
+measures group $x$'s within-group proximity, \\
+
+& & $P_{yy}$
+measures group $y$'s within-group proximity, \\
+
+& & $P_{xy}$
+measure between-group proximity, and \\
+
+& & $P_{tt}$
+is the average proximity among all members of the population under study. \\
+
+\bottomrule
+\end{tabularx}
+
+\medskip
+\begin{minipage}{\textwidth}
+\footnotesize
+\em{Note: This table lists the measures defined and used in this study, not every available measure within each dimension}.
+%\textit{Note.} Dimensions describe distinct features of segregation; measures operationalize those features. This table lists the measures defined in this appendix, not every available measure within each dimension. Interaction and isolation describe potential exposure, not observed contact. The proximity components are not additional dimensions or additional votes in the hypersegregation classification. ICE is a supplementary measure and is not included among the five dimensions.
+\end{minipage}
+\end{table}
+
+%%%%%%%%%%%%%
+\subsection{Evenness}
+
+Evenness represents the population dissimilarity between the units in a region $r_k$. $D$ represents the Index of Dissimilarity, a measure of the uneven distribution of two groups across units within the
+region and $D \in [0, 1]$. 
+
+\begin{equation}
+D = \dfrac{1}{2}
+\sum_{i=1}^{n}
+\left|
+\dfrac{x_i}{X} - \dfrac{y_i}{Y}
+\right|
+\end{equation}
+
+%%%%%%%%%%%%%
+\subsection{Exposure}
+
+Interaction and isolation measure potential within-unit exposure to group $y$ and group $x$, respectively:
+
+\begin{equation}
+_{x}P_{y} = \sum_{i=1}^{n} \Big( \dfrac{x_i}{X} \Big) \Big( \dfrac{y_i}{t_i} \Big)
+\end{equation}
+
+\begin{equation}
+_{x}P_{x} = \sum_{i=1}^{n} \Big( \dfrac{x_i}{X} \Big) \Big( \dfrac{x_i}{t_i} \Big)
+\end{equation}
+
+You should recall that $t_i$ is the total population in unit $i$; that is, $t_i \neq T$.
+
+${}_{x}P_y \in [0,1]$ and ${}_{x}P_x \in [0,1]$ and depend on regional group composition.
+
+Under uniform composition, ${}_{x}P_y=\dfrac{Y}{T}$ and
+${}_{x}P_x=\dfrac{X}{T}$.
+
+%%%%%%%%%%%%%
+\subsection{Concentration}
+
+The Delta Index, $\Delta$, measures the uneven distribution of group $x$ relative to the distribution of land area.
+
+\begin{equation} 
+\Delta = \dfrac{1}{2} \sum_{i=1}^{n} \Big| \dfrac{x_i}{X} - \dfrac{a_i}{A} \Big|
+\end{equation}
+
+%%%%%%%%%%%%%
+\subsection{Centralization}
+
+The absolute centralization index, $ACE_x$, measures
+the distribution of group $x$ around a specified center
+relative to the distribution of land area. Centralization
+was commonly measured relative to a central business
+district (CBD). The Census Bureau uses
+\textit{distance from the population centroid} rather than the
+CBD\footnote{U.S. Census Bureau, ``Housing Patterns:
+Appendix B: Measures of Residential Segregation.''
+\url{https://www.census.gov/topics/housing/housing-patterns/guidance/appendix-b.html}}.
+
+To retain the original indices for unit $i$ in region $r_k$, we let $\pi$ be a permutation of the neighborhood index
+set $\{1,\ldots,n\}$ that orders neighborhoods by increasing
+distance from the selected center. Thus, $\pi(h)$ is the
+original index of the neighborhood in position $h$.
+Population and land-area values follow the same ordering.
+
+We first define the cumulative shares as:
+
+\[
+C_i^x = \sum_{h=1}^{i} \dfrac{x_{\pi(h)}}{X},
+\qquad
+C_i^a = \sum_{h=1}^{i} \dfrac{a_{\pi(h)}}{A},
+\qquad
+C_0^x=C_0^a=0.
+\]
+
+\noindent
+where 
+
+$i$ is the cumulative endpoint in the ordered
+sequence; 
+
+$h$ indexes positions from $1$ through $i$; 
+
+$x_{\pi(h)}$ and $a_{\pi(h)}$ are the focal-group
+population and land area of the neighborhood occupying
+position $h$; 
+
+$X$ is the
+focal group's total regional population; 
+
+$A$ is
+the region's total land area. 
+
+Thus, $C_i^x$ and $C_i^a$ are the population and land-area
+shares accumulated through the first $i$ neighborhoods
+in distance order. The initial shares are zero, and
+$C_n^x=C_n^a=1$.
+
+\begin{equation}
+ACE_x =
+\sum_{i=1}^{n} C_{i-1}^x C_i^a
+-
+\sum_{i=1}^{n} C_i^x C_{i-1}^a
+\end{equation}
+
+%%%%%%%%%%%%%
+\subsection{Clustering}
+
+Clustering measures incorporate proximity between units.
+
+We let $c_{ij}$ denote a nonnegative proximity weight between
+units $i$ and $j$, with larger values indicating greater
+proximity. We define average within-group and between-group
+proximities as follows:
+
+\begin{equation}
+P_{xx} =
+\dfrac{1}{X^2}
+\sum_{i=1}^{n} \sum_{j=1}^{n}
+x_i x_j c_{ij}
+\end{equation}
+
+\begin{equation}
+P_{yy} =
+\dfrac{1}{Y^2}
+\sum_{i=1}^{n} \sum_{j=1}^{n}
+y_i y_j c_{ij}
+\end{equation}
+
+\begin{equation}
+P_{xy} =
+\dfrac{1}{XY}
+\sum_{i=1}^{n} \sum_{j=1}^{n}
+x_i y_j c_{ij}
+\end{equation}
+
+Average proximity among all members of the population
+under study is
+
+\begin{equation}
+P_{tt} =
+\dfrac{1}{T^2}
+\sum_{i=1}^{n} \sum_{j=1}^{n}
+t_i t_j c_{ij}.
+\end{equation}
+
+For a population consisting of groups $x$ and $y$,
+White's Spatial Proximity Index (SP) is
+
+\begin{equation}
+SP =
+\dfrac{X P_{xx} + Y P_{yy}}{T P_{tt}}.
+\end{equation}
+
+%%%%%%%%%%%%%
+\section{Hypersegregation}
+
+Hypersegregation is defined by Massey and Denton (1989) as a region that exhibits severe segregation in at least four of the five dimensions of segregation\footnote{Massey, Douglas S., and Nancy A. Denton. “Hypersegregation in US Metropolitan Areas: Black and Hispanic Segregation along Five Dimensions.” Demography, vol. 26, no. 3, 1989, pp. 373–91.}$^{,}$\footnote{https://www.ebsco.com/research-starters/sociology/hypersegregation/}. Next, the analysis proceeds to examine (a) residential hypersegregation and (b) school hypersegregation among the most populous MSAs.
+
+
+\end{document}
