@@ -36,7 +36,7 @@ library(here)
 here::i_am("technical-revisions-topologies-of-antiblackness.Rmd")
 ```
 
-# Overview
+# Overview 
 
 This study conceptualizes antiblackness as a relational, system-level pattern of separation between Black people and the nonBlack population. It develops comparable Black–nonBlack measures of residential and school segregation across large U.S. metropolitan areas, using a mathematical sociology approach that treats residential and school segregation as linked but distinct distributional systems. This study makes Black–nonBlack separation the analytic object and evaluates whether that separation is reproduced, intensified, or disrupted between neighborhoods and schools.
 
