@@ -60,6 +60,8 @@ library(purrr)
 library(janitor)
 options(tigris_class = "sf", 
         tigris_use_cache = TRUE)
+
+library(divseg)
 ```
 
 # Load data
@@ -292,6 +294,7 @@ unlink(tmp)
 ```{r}
 names(geo_crosswalk)
 ```
+
 ### Join LISD-GEO
 
 ```{r}
@@ -847,7 +850,7 @@ ccd_school_data %>%
   )
 ```
 
-# Construct analysis inputs
+# Construct analytic inputs
 
 ## Residential input
 
@@ -872,7 +875,7 @@ residential_input <- tract_data_largest_msas %>%
   )
 ```
 
-### School input
+## School input
 
 The school analytic universe is designed to approximate SEDA’s focus on open, regular, non-virtual schools using the available CCD directory classifications. Because SEDA’s estimates are calculated from LISD, which includes cleaned and imputed CCD data, the primary calculations are treated as a Black–nonBlack adaptation informed by, rather than an exact replication of, SEDA’s school-segregation estimates.
 
@@ -915,7 +918,7 @@ school_input <- ccd_school_data %>%
   )
 ```
 
-#### Check: school input 
+### Check: school input 
 
 ```{r}
 school_input %>%
@@ -934,6 +937,47 @@ school_input %>%
     black_enrollment == 0 |
       nonblack_enrollment == 0
   )
+```
+
+
+---
+
+# Hypersegregation
+
+```{r}
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
 ```
 
 

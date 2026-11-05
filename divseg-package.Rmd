@@ -1,0 +1,63 @@
+---
+title: "divseg package"
+author: 
+  - "Nathan N. Alexander, PhD"
+  - "Howard University"
+#bibliography: brown-references.bib # include references file
+#csl: apa.csl
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    theme: flatly
+  pdf_document:
+    toc: false
+    toc_depth: 4
+    number_section: true 
+  word_document:
+    toc: false
+    reference_docx: word-styles-reference.docx
+editor_options:
+  markdown:
+    wrap: sentence
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo    = knitr::is_html_output(),  # code only in HTML
+  results = knitr::is_html_output(),  # results only in HTML  
+  warning = FALSE,
+  message = FALSE
+)
+
+library(here)
+here::i_am("divseg-package.Rmd")
+
+# https://christophertkenny.com/divseg/
+# https://christopherkenny.r-universe.dev/divseg
+```
+
+
+```{r, eval=F}
+install.packages("divseg")
+```
+
+
+```{r}
+library(divseg)
+```
+
+
+```{r}
+data('de_county')
+data('de_tract')
+```
+
+
+```{r}
+
+
+```
+
