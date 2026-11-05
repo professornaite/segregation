@@ -3,12 +3,16 @@ project:
   output-dir: docs
 
 website:
-  title: ""
+  title: "Topologies of Antiblackness"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
 
 format:
   html:
     page-layout: full
-    theme: cosmo light
+    theme: cosmo
     css: styles/site.css
     toc: true
     grid:

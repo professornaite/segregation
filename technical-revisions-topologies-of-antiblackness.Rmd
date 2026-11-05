@@ -44,11 +44,7 @@ The study's theoretical object is a conceptualization of antiblackness operation
 
 # Study Design
 
-This study examines Black–nonBlack segregation in residential and educational settings across the largest U.S. Metropolitan Statistical Areas (MSAs). It uses a two-stage analytic design.
-
-First, the study estimates Black–nonBlack residential segregation across Census tracts within each MSA using measures of evenness and exposure. Second, it estimates Black–nonBlack school segregation across public schools within the same MSAs using parallel measures of evenness and exposure. The analysis then compares residential and school segregation profiles to identify metropolitan contexts in which Black separation from the nonBlack population converges, diverges, or compounds across housing and education systems.
-
-The study defines Black residents as Black or African American alone, not Hispanic or Latino. The nonBlack comparison population is all remaining residents or students after removal of the focal Black population. SEDA residential and school segregation files are retained as methodological benchmarks and contextual comparison data; primary Black–nonBlack measures are calculated from tract-level ACS population counts and school-level CCD enrollment counts.
+This study uses a two-stage analytic design to examine Black–nonBlack segregation in residential and educational settings across Metropolitan Statistical Areas (MSAs) in the United States. First, the study estimates Black–nonBlack residential segregation across Census tracts within each MSA using measures of evenness and exposure. Second, it estimates Black–nonBlack school segregation across public schools within the same MSAs using parallel measures of evenness and exposure, and extending those to the five measures of hypersegregation. The analysis then compares residential and school segregation profiles to identify metropolitan contexts in which Black separation from the nonBlack population converges, diverges, or compounds across housing and education systems. The study defines Black residents as Black or African American alone, not Hispanic or Latino. The nonBlack comparison population is all remaining residents or students after removal of the focal Black population. SEDA residential and school segregation files are retained as methodological benchmarks and contextual comparison data; primary Black–nonBlack measures are calculated from tract-level ACS population counts and school-level CCD enrollment counts.
 
 ```{r, message=F, warning=F}
 # file setup and global options
