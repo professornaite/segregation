@@ -919,7 +919,7 @@ school_input <- ccd_school_data %>%
   )
 ```
 
-#### Check: school input
+#### Check: school input 
 
 ```{r}
 school_input %>%
