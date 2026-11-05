@@ -1,0 +1,18 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: ""
+
+format:
+  html:
+    page-layout: full
+    theme: cosmo light
+    css: styles/site.css
+    toc: true
+    grid:
+      sidebar-width: 0px
+      body-width: 1600px
+
+editor: source
