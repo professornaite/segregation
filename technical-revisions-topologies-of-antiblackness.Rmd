@@ -853,7 +853,7 @@ ccd_school_data %>%
 ## Residential input
 
 ```{r}
-residential_input <- tract_data_largest_msas %>%
+residential_input <- tract_data_msa %>%
   dplyr::filter(
     !is.na(totalpop),
     !is.na(black),
