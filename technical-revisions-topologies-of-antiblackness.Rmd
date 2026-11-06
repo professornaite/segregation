@@ -38,9 +38,7 @@ here::i_am("technical-revisions-topologies-of-antiblackness.Rmd")
 
 # Overview 
 
-This study conceptualizes antiblackness as a relational, system-level pattern of separation between Black people and the nonBlack population. It develops comparable Black–nonBlack measures of residential and school segregation across large U.S. metropolitan areas, using a mathematical sociology approach that treats residential and school segregation as linked but distinct distributional systems. This study makes Black–nonBlack separation the analytic object and evaluates whether that separation is reproduced, intensified, or disrupted between neighborhoods and schools.
-
-The study's theoretical object is a conceptualization of antiblackness operationalized as Black–nonBlack separation across residential and school systems. This analysis situates a foundation for future work on hypersegregation across systems.
+This study conceptualizes antiblackness as a relational, system-level pattern of separation between Black people and the nonBlack population. It develops comparable Black–nonBlack measures of residential and school segregation across large U.S. metropolitan areas, using a mathematical sociology approach that treats residential and school segregation as linked but distinct distributional systems. This study makes Black–nonBlack separation the analytic object and evaluates whether that separation is reproduced, intensified, or disrupted between neighborhoods and schools. The study's theoretical object is a conceptualization of antiblackness operationalized as Black–nonBlack separation across residential and school systems. This analysis situates a foundation for future work on hypersegregation across systems.
 
 # Study Design
 
@@ -191,8 +189,6 @@ names(sch_seg)[
 
 The Longitudinal Imputed School Dataset (LISD) and SEDA Geographic Crosswalk provide the cleaned, imputed, and geographically harmonized school data used in SEDA’s school-segregation estimates. 
 
-LISD will be retained alongside the raw CCD data retrieved through the Urban Institute to allow comparison of school-level counts and selection of the most appropriate data source for the study’s Black–nonBlack measures.
-
 ```{r, warning=F, message=F}
 lisd_url <- paste0(
   "https://stacks.stanford.edu/file/druid:",
@@ -247,21 +243,21 @@ lisd %>%
 
 For LISD:
 
-    member is the total school membership/enrollment measure.
+- member is the total school membership/enrollment measure.
 
-    tot_black is Black enrollment.
+- tot_black is Black enrollment.
 
-    tot_nam, tot_asian, tot_hisp, tot_tr, and tot_white are the other reported race/ethnicity counts.
+- tot_nam, tot_asian, tot_hisp, tot_tr, and tot_white are the other reported race/ethnicity counts.
 
-    grdlo and grdhi identify the lowest and highest grades served, but LISD does not provide enrollment separately by grade.
+- grdlo and grdhi identify the lowest and highest grades served, but LISD does not provide enrollment separately by grade.
 
-    type provides the school-type label; your displayed entries are "Regular School".
+- type provides the school-type label; your displayed entries are "Regular School".
 
-    virtual is numeric, so inspect its codes before using it as an eligibility filter.
+- virtual is numeric, so inspect its codes before using it as an eligibility filter.
 
-    cbsa23id and cbsa23name are the crosswalk-derived 2023 CBSA fields.
+- cbsa23id and cbsa23name are the crosswalk-derived 2023 CBSA fields.
 
-    metrostatus23 is already "Metropolitan area" because you created lisd_metro using that restriction.
+- metrostatus23 is already "Metropolitan area" because you created lisd_metro using that restriction.
     
 ### Geographic crosswalk
 
@@ -624,7 +620,7 @@ tract_data_msa <- tract_data %>%
 
 ### Select largest MSAs
 
-The analytic sample consists of the 100 largest U.S. MSAs, ranked by total population in the 2018–2022 ACS five-year estimates.
+I first develop a sensitivity analysis sample which consists of the 100 largest U.S. MSAs, ranked by total population in the 2018–2022 ACS five-year estimates.
 
 #### Set n_largest_msas
 
